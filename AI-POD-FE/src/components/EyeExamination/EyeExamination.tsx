@@ -1,5 +1,63 @@
-export default function EyeExamination(){
-    return(
-        <h1> This is eye examination page</h1>
-    )
+import { useState } from "react";
+import axios from "axios";
+import EyeExaminationView from "./EyeExaminationView";
+
+export default function EyeExamination() {
+  const [file, setFile] = useState<File | null>(null);
+  const [desc, setDesc] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    if (!file) return alert("Please select a photo.");
+    setLoading(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      form.append("description", desc);
+
+      const resp = await axios.post("http://localhost:3000/analyze_eye", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setResult(resp.data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <EyeExaminationView
+      file={file}
+      desc={desc}
+      loading={loading}
+      result={result}
+      error={error}
+      onFileChange={handleFileChange}
+      onDescChange={setDesc}
+      onSubmit={handleSubmit}
+    />
+  );
 }
+
+export type EyeExaminationViewProps = {
+  file: File | null;
+  desc: string;
+  loading: boolean;
+  result: any;
+  error: any;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDescChange: (val: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+};

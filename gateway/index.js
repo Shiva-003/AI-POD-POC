@@ -61,4 +61,42 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
   }
 });
 
+// ------------------
+// Eye Disease API
+// ------------------
+app.post('/analyze_eye', upload.single('image'), async (req, res) => {
+  const jobId = uuidv4();
+  const imagePath = req.file.path;
+  const description = req.body.description || '';
+
+  try {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(imagePath));
+    form.append('job_id', jobId);
+    form.append('description', description);
+
+    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze_eye`, form, {
+      headers: form.getHeaders(),
+      timeout: 120000
+    });
+
+    const result = imgResp.data;
+
+    res.json({
+      job_id: jobId,
+      label: result.label,
+      confidence: result.confidence,
+      annotated_image: result.annotated_image,
+      report: result.report,
+      report_url: result.report_url
+    });
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ error: 'Eye analysis failed', detail: err.message });
+  } finally {
+    try { if (req.file) fs.unlinkSync(req.file.path); } catch (e) {}
+  }
+});
+
 app.listen(3000, () => console.log('Gateway listening on :3000'));
