@@ -1,7 +1,7 @@
 import type { WoundExaminationViewProps } from "./WoundExamination";
+import { useState } from "react";
 
 export default function WoundExaminationView({
-  file,
   desc,
   loading,
   result,
@@ -10,6 +10,17 @@ export default function WoundExaminationView({
   onDescChange,
   onSubmit,
 }: WoundExaminationViewProps) {
+  const [fileName, setFileName] = useState<string>("");
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFileName(e.target.files[0].name);
+    } else {
+      setFileName("");
+    }
+    onFileChange(e);
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -27,13 +38,16 @@ export default function WoundExaminationView({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={onFileChange}
+                  onChange={handleFileChange}
                   className="hidden"
                 />
                 <span className="text-blue-600 font-medium">
                   Take Photo / Upload
                 </span>
               </label>
+              {fileName && (
+                <p className="mt-2 text-sm text-gray-600">Selected: {fileName}</p>
+              )}
             </div>
 
             {/* Step 2 */}

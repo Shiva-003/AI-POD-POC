@@ -1,7 +1,7 @@
+import { useState } from "react";
 import type { EyeExaminationViewProps } from "./EyeExamination";
 
 export default function EyeExaminationView({
-  file,
   desc,
   loading,
   result,
@@ -10,6 +10,16 @@ export default function EyeExaminationView({
   onDescChange,
   onSubmit,
 }: EyeExaminationViewProps) {
+  const [imageName, setImageName] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageName(file.name);
+    }
+    onFileChange(e);
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -27,13 +37,16 @@ export default function EyeExaminationView({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={onFileChange}
+                  onChange={handleFileChange}
                   className="hidden"
                 />
                 <span className="text-blue-600 font-medium">
                   Take Photo / Upload
                 </span>
               </label>
+              {imageName && (
+                <p className="mt-2 text-sm text-gray-600">Selected: {imageName}</p>
+              )}
             </div>
 
             {/* Step 2 */}
