@@ -1,7 +1,7 @@
 import type { SkinExaminationViewProps } from "./SkinExamination.helper";
+import { useState } from "react";
 
 export default function SkinExaminationView({
-  file,
   desc,
   location,
   loading,
@@ -12,14 +12,25 @@ export default function SkinExaminationView({
   onLocationChange,
   onSubmit,
 }: SkinExaminationViewProps) {
-  return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        {/* Left: Form */}
-        <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-          <h2 className="text-2xl font-bold mb-6">Skin Examination</h2>
+  const [fileName, setFileName] = useState<string>("");
 
-          <form onSubmit={onSubmit} className="space-y-5">
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFileName(e.target.files[0].name);
+    } else {
+      setFileName("");
+    }
+    onFileChange(e);
+  };
+
+  return (
+    <div className="flex flex-col bg-white px-6 py-4 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* Left: Form */}
+        <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
+          <h2 className="text-xl font-bold mb-4">Skin Examination</h2>
+
+          <form onSubmit={onSubmit} className="space-y-4 text-sm">
             {/* Step 1 */}
             <div>
               <label className="block font-medium mb-2">
@@ -29,11 +40,16 @@ export default function SkinExaminationView({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={onFileChange}
+                  onChange={handleFileChange}
                   className="hidden"
                 />
-                <span className="text-blue-600 font-medium">Take Photo / Upload</span>
+                <span className="text-blue-600 font-medium">
+                  Take Photo / Upload
+                </span>
               </label>
+              {fileName && (
+                <p className="mt-1 text-xs text-gray-600">Selected: {fileName}</p>
+              )}
             </div>
 
             {/* Step 2 */}
@@ -45,7 +61,7 @@ export default function SkinExaminationView({
                 placeholder="e.g. mole has changed shape, itchy patch, new spot, etc."
                 value={desc}
                 onChange={(e) => onDescChange(e.target.value)}
-                className="w-full rounded-md border p-3 text-sm"
+                className="w-full rounded-md border p-2 text-sm"
                 rows={3}
               />
             </div>
@@ -58,7 +74,7 @@ export default function SkinExaminationView({
               <select
                 value={location}
                 onChange={(e) => onLocationChange(e.target.value)}
-                className="w-full p-3 rounded-md border"
+                className="w-full p-2 rounded-md border text-sm"
               >
                 <option value="">Select location</option>
                 <option>Face</option>
@@ -72,63 +88,72 @@ export default function SkinExaminationView({
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
             >
               {loading ? "Analyzing..." : "Submit for Analysis"}
             </button>
           </form>
 
-          {error && <div className="mt-4 text-red-600 text-sm">{String(error)}</div>}
+          {error && (
+            <div className="mt-3 text-red-600 text-xs">{String(error)}</div>
+          )}
         </div>
 
         {/* Right: Results */}
-        <div className="bg-gray-50 p-6 rounded-lg shadow-sm min-h-[300px]">
+        <div className="bg-gray-50 p-5 rounded-lg shadow-sm min-h-[280px] flex flex-col justify-center items-center">
           {result ? (
             <>
-              <h3 className="text-2xl font-bold mb-4">Skin Analysis Result</h3>
-              <div className="flex flex-col md:flex-row items-start gap-6">
+              <h3 className="text-xl font-bold mb-4">Skin Analysis Result</h3>
+              <div className="flex flex-col md:flex-row items-start gap-4 text-sm">
                 {result.annotated_image && (
                   <img
                     src={`data:image/png;base64,${result.annotated_image}`}
-                    className="w-40 h-40 object-cover rounded-md border"
+                    className="w-36 h-36 object-cover rounded-md border"
                     alt="lesion"
                   />
                 )}
                 <div>
-                  <div className="text-green-600 font-bold text-xl">{result.label}</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-green-600 font-bold text-base">
+                    {result.label}
+                  </div>
+                  <div className="text-xs text-gray-600">
                     Confidence: {Math.round(result.confidence * 100)}%
                   </div>
                   {result.recommendation && (
-                    <div className="mt-4">
+                    <div className="mt-3">
                       <h4 className="font-medium">Recommendations</h4>
-                      <p className="text-sm text-gray-700">{result.recommendation}</p>
+                      <p className="text-xs text-gray-700">
+                        {result.recommendation}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-5">
                 <button
-                  className="px-4 py-2 border rounded-md hover:bg-gray-100 transition"
-                  onClick={() => window.open(`/report?job=${result.job_id}`, "_blank")}
+                  className="px-3 py-1 border rounded-md hover:bg-gray-100 transition text-sm"
+                  onClick={() =>
+                    window.open(`/report?job=${result.job_id}`, "_blank")
+                  }
                 >
                   Download Report
                 </button>
               </div>
             </>
           ) : (
-            <p className="text-gray-500 text-lg">
+            <p className="text-gray-500 text-sm text-center">
               Your results will appear here after submission.
             </p>
           )}
         </div>
       </div>
 
-      <p className="mt-8 text-xs text-gray-400 text-center">
-        This analysis is AI-assisted and not a substitute for a professional medical
-        diagnosis. If in doubt, consult a healthcare provider.
+      {/* Footer note */}
+      <p className="mt-4 text-[10px] text-gray-400 text-center">
+        This analysis is AI-assisted and not a substitute for a professional
+        medical diagnosis. If in doubt, consult a healthcare provider.
       </p>
-    </>
+    </div>
   );
 }
