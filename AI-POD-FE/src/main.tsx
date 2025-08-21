@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import SkinExamination from './components/SkinExamination/SkinExamination.tsx'
 import Home from './components/HomePage/HomePage.tsx'
 import EyeExamination from './components/EyeExamination/EyeExamination.tsx'
+import WoundExamination from './components/WoundExamination/WoundExamination.tsx'
 
 const router = createBrowserRouter([
   {
@@ -14,7 +15,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'skin-examination', element: <SkinExamination /> },
-      { path: 'eye-examination', element: <EyeExamination/> }
+      { path: 'eye-examination', element: <EyeExamination/> },
+      { path: 'wound-examination', element: <WoundExamination/> }
     ],
   },
 ]);

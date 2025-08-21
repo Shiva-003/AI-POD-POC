@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { FaceSmileIcon, EyeIcon } from "@heroicons/react/24/solid"; 
+import { FaceSmileIcon, EyeIcon, PlusCircleIcon  } from "@heroicons/react/24/solid"; 
 
 export default function Home() {
   const navigate = useNavigate();
@@ -26,6 +26,15 @@ export default function Home() {
     >
       <EyeIcon className="w-20 h-20 text-blue-600 mb-2" />
       <div className="text-center text-blue-600 font-medium">Eye</div>
+    </div>
+
+    {/* Wound */}
+    <div
+      onClick={()=> navigate("/wound-examination")}
+      className="cursor-pointer bg-white border rounded-lg p-4 hover:shadow-md transition flex flex-col items-center"
+    >
+      <PlusCircleIcon  className="w-20 h-20 text-blue-600 mb-2" />
+      <div className="text-center text-blue-600 font-medium">Wound</div>
     </div>
   </div>
 </div>

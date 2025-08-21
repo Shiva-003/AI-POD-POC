@@ -30,6 +30,24 @@ skin_model = AutoModelForImageClassification.from_pretrained(HF_IMAGE_MODEL_ID).
 id2label = getattr(skin_model.config, "id2label", None)
 
 # -------------------
+# Wound Monitoring Model
+# -------------------
+HF_WOUND_MODEL_ID = "Hemg/Wound-Image-classification"
+print(f"Loading wound model {HF_WOUND_MODEL_ID} on {DEVICE}...")
+
+wound_processor = AutoImageProcessor.from_pretrained(HF_WOUND_MODEL_ID)
+wound_model = AutoModelForImageClassification.from_pretrained(HF_WOUND_MODEL_ID).to(DEVICE).eval()
+
+# Class mapping (if available in model config)
+id2label_wound = getattr(wound_model.config, "id2label", None)
+
+# Transform for inference (kept similar to other models)
+wound_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+])
+
+# -------------------
 # Eye Disease Model
 # -------------------
 classes_eye = np.array(['Amd', 'Cataract', 'Glaucoma', 'Myopia', 'Not eye', 'Normal'])
@@ -159,6 +177,44 @@ async def analyze_skin(
     return JSONResponse(content={
         "job_id": job_id,
         "model_id": HF_IMAGE_MODEL_ID,
+        "label": label_name,
+        "confidence": top_conf,
+        "annotated_image": annotated_b64,
+        # "report": report_data,
+        # "report_url": report_url
+    })
+
+@app.post("/analyze_wound")
+async def analyze_wound(
+    file: UploadFile = File(...),
+    job_id: str = Form(...),
+    description: str = Form(""),
+    location: str = Form("")
+):
+    try:
+        contents = await file.read()
+        pil = Image.open(io.BytesIO(contents)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image upload: {e}")
+
+    try:
+        inputs = wound_processor(images=pil, return_tensors="pt").to(DEVICE)
+        with torch.no_grad():
+            outputs = wound_model(**inputs)
+            logits = outputs.logits.cpu().squeeze(0)
+        top_idx = int(torch.argmax(logits).item())
+        top_conf = float(torch.softmax(logits, dim=0)[top_idx].item())
+        label_name = id2label_wound[top_idx] if id2label_wound else f"class_{top_idx}"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Wound image analysis failed: {e}")
+
+    annotated = annotate_image(pil, label_name, top_conf)
+    annotated_b64 = pil_to_base64(annotated)
+    # report_data, report_url = generate_report(job_id, label_name, top_conf, description, location, "wound")
+
+    return JSONResponse(content={
+        "job_id": job_id,
+        "model_id": HF_WOUND_MODEL_ID,
         "label": label_name,
         "confidence": top_conf,
         "annotated_image": annotated_b64,
