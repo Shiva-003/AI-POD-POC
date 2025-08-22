@@ -16,7 +16,7 @@ const IMAGE_SERVICE = process.env.IMAGE_SERVICE_URL || 'http://localhost:8000';
 // Allow React frontend
 app.use(cors({ origin: "*" }));
 
-app.post('/analyze', upload.single('image'), async (req, res) => {
+app.post('/analyze-skin', upload.single('image'), async (req, res) => {
   const jobId = uuidv4();
   const imagePath = req.file.path;
   const description = req.body.description || '';
@@ -31,7 +31,7 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     form.append('location', location);
 
     // Send to FastAPI (which now returns both classification + report)
-    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze`, form, {
+    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze-skin`, form, {
       headers: form.getHeaders(),
       timeout: 120000
     });
@@ -64,7 +64,7 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
 // ------------------
 // Eye Disease API
 // ------------------
-app.post('/analyze_eye', upload.single('image'), async (req, res) => {
+app.post('/analyze-eye', upload.single('image'), async (req, res) => {
   const jobId = uuidv4();
   const imagePath = req.file.path;
   const description = req.body.description || '';
@@ -75,7 +75,7 @@ app.post('/analyze_eye', upload.single('image'), async (req, res) => {
     form.append('job_id', jobId);
     form.append('description', description);
 
-    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze_eye`, form, {
+    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze-eye`, form, {
       headers: form.getHeaders(),
       timeout: 120000
     });
@@ -102,7 +102,7 @@ app.post('/analyze_eye', upload.single('image'), async (req, res) => {
 // ------------------
 // Wound Monitoring API
 // ------------------
-app.post('/analyze_wound', upload.single('image'), async (req, res) => {
+app.post('/analyze-wound', upload.single('image'), async (req, res) => {
   const jobId = uuidv4();
   const imagePath = req.file.path;
   const description = req.body.description || '';
@@ -113,7 +113,7 @@ app.post('/analyze_wound', upload.single('image'), async (req, res) => {
     form.append('job_id', jobId);
     form.append('description', description);
 
-    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze_wound`, form, {
+    const imgResp = await axios.post(`${IMAGE_SERVICE}/analyze-wound`, form, {
       headers: form.getHeaders(),
       timeout: 120000
     });
@@ -136,5 +136,40 @@ app.post('/analyze_wound', upload.single('image'), async (req, res) => {
     try { if (req.file) fs.unlinkSync(req.file.path); } catch (e) {}
   }
 });
+
+app.get('/check-report-status/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+
+  try {
+    const statusResp = await axios.get(`${IMAGE_SERVICE}/check-report-status/${jobId}`);
+    res.json(statusResp.data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error fetching report status', detail: err.message });
+  }
+});
+
+
+// Gateway - Download report endpoint
+app.get('/download-report/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+
+  try {
+    // Forward the download request to the FastAPI server
+    const response = await axios.get(`http://localhost:8000/pdf/${jobId}`, { responseType: 'arraybuffer' });
+
+    // Set headers to tell the browser it's a PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=diagnosis_report_${jobId}.pdf`);
+
+    // Send the file back to the client
+    res.send(response.data);
+
+  } catch (error) {
+    console.error('Error downloading report:', error.message);
+    res.status(500).json({ error: 'Failed to download the report.' });
+  }
+});
+
 
 app.listen(3000, () => console.log('Gateway listening on :3000'));

@@ -1,5 +1,5 @@
+import { useEffect, useState } from "react";
 import type { SkinExaminationViewProps } from "./SkinExamination.helper";
-import { useState } from "react";
 
 export default function SkinExaminationView({
   desc,
@@ -11,7 +11,32 @@ export default function SkinExaminationView({
   onDescChange,
   onLocationChange,
   onSubmit,
+  onCheckStatus,
+  onReportDownload,
 }: SkinExaminationViewProps) {
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [showDownloadButton, setShowDownloadButton] = useState(false);
+
+  // Show "Processing..." for 5 seconds, then check for report status
+  useEffect(() => {
+    if (result?.report_status === 'processing') {
+      setShowProcessing(true);
+
+      // Set a timer to check status after 5 seconds
+      const timer = setTimeout(() => {
+        setShowProcessing(false);
+      }, 5000);
+
+      // Cleanup timer if the component is unmounted
+      return () => clearTimeout(timer);
+    } else if (result?.report_status === 'completed') {
+      setShowDownloadButton(true);
+    } else {
+      setShowProcessing(false);
+      setShowDownloadButton(false);
+    }
+  }, [result?.report_status, result?.job_id, onCheckStatus]);
+  
   const [fileName, setFileName] = useState<string>("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,32 +138,35 @@ export default function SkinExaminationView({
                   />
                 )}
                 <div>
-                  <div className="text-green-600 font-bold text-base">
-                    {result.label}
-                  </div>
+                  <div className="text-green-600 font-bold text-base">{result.label}</div>
                   <div className="text-xs text-gray-600">
-                    Confidence: {Math.round(result.confidence * 100)}%
+                    Confidence: {Math.round(result?.confidence * 100)}%
                   </div>
-                  {result.recommendation && (
-                    <div className="mt-3">
-                      <h4 className="font-medium">Recommendations</h4>
-                      <p className="text-xs text-gray-700">
-                        {result.recommendation}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
+              {/* Check Status / Download Report */}
               <div className="mt-5">
+                {
+                  result.report_status === 'processing' &&
                 <button
-                  className="px-3 py-1 border rounded-md hover:bg-gray-100 transition text-sm"
-                  onClick={() =>
-                    window.open(`/report?job=${result.job_id}`, "_blank")
-                  }
+                  className="px-3 py-1 border rounded-md hover:bg-gray-100 transition"
+                  onClick={() => onCheckStatus(result.job_id)}
                 >
-                  Download Report
+                  Check Report Status
                 </button>
+                }
+
+                {showProcessing && <p className="mt-2 text-yellow-600">Processing...</p>}
+
+                {showDownloadButton && (
+                  <button
+                    className="px-3 py-1 border rounded-md hover:bg-gray-100 transition mt-4"
+                    onClick={() => onReportDownload(result.job_id)}
+                  >
+                    Download Report
+                  </button>
+                )}
               </div>
             </>
           ) : (

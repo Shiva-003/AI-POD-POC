@@ -1,5 +1,5 @@
-import { useState } from "react"
-import axios from 'axios'
+import { useState } from "react";
+import axios from 'axios';
 import SkinExaminationView from "./SkinExaminationView";
 
 export default function SkinExamination(){
@@ -17,29 +17,76 @@ export default function SkinExamination(){
         }
     };
 
-    const handleSubmit = async (e: any) => {
-        e.preventDefault()
-        if (!file) return alert('Please select a photo.')
-        setLoading(true)
-        setError(null)
-        try {
-        const form = new FormData()
-        form.append('image', file)
-        form.append('description', desc)
-        form.append('location', location)
-        const resp = await axios.post('http://localhost:3000/analyze', form, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        setResult(resp.data)
-        } catch (err: any) {
-        console.error(err)
-        setError(err?.response?.data || err.message)
-        } finally {
-        setLoading(false)
-        }
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return alert('Please select a photo.');
+    setLoading(true);
+    setError(null);
 
-    return (
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      form.append('description', desc);
+      form.append('location', location);
+
+      const resp = await axios.post('http://localhost:3000/analyze-skin', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setResult({
+        ...resp.data,
+        report_status: 'processing'  // Initially set status as 'processing' after submission
+      });
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckStatus = async (jobId: string) => {
+    try {
+      const resp = await axios.get(`http://localhost:3000/check-report-status/${jobId}`);
+      setResult({
+        ...result,
+        report_status: resp.data.status,
+        report_url: resp.data.report_url
+      });
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data || err.message);
+    }
+  };
+
+  const handleDownloadReport = async (jobId: string) => {
+    try {
+      const response = await axios.get(`http://localhost:3000/download-report/${jobId}`, { responseType: 'blob' });
+
+      // Create a blob from the PDF file
+      const file = new Blob([response.data], { type: 'application/pdf' });
+
+      // Create a link element
+      const link = document.createElement('a');
+      const url = window.URL.createObjectURL(file);
+      link.href = url;
+      link.setAttribute('download', `diagnosis_report_${jobId}.pdf`);
+
+      // Append to the DOM and trigger the download
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading the report:', error);
+      alert('There was an issue downloading the report. Please try again.');
+    }
+  };
+
+
+  return (
     <SkinExaminationView
       file={file}
       desc={desc}
@@ -51,6 +98,8 @@ export default function SkinExamination(){
       onDescChange={setDesc}
       onLocationChange={setLocation}
       onSubmit={handleSubmit}
+      onCheckStatus={handleCheckStatus}
+      onReportDownload={handleDownloadReport}
     />
   );
-};
+}

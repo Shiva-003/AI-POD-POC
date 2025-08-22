@@ -24,7 +24,7 @@ function App() {
           <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
             ✓
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Proceedix</h1>
+          <h1 className="text-3xl font-bold text-gray-800">DiagnosiX</h1>
         </div>
 
         <div className="flex-1">

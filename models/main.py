@@ -1,16 +1,28 @@
 import os
 import io
 import json
+import re
 import base64
 import torch
 import torch.nn as nn
 import numpy as np
 from PIL import Image, ImageDraw
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from torchvision import transforms
 from transformers import AutoImageProcessor, AutoModelForImageClassification, AutoTokenizer, AutoModelForCausalLM
 from ml_models.eye_model import ImprovedTinyVGGModel
+from fastapi.responses import FileResponse
+from jinja2 import Environment, FileSystemLoader
+from fpdf import FPDF
+
+
+# Define directory to save reports
+PDF_DIR = "pdf_reports"
+os.makedirs(PDF_DIR, exist_ok=True)
+
+# Template folder for Jinja2 (HTML files)
+TEMPLATE_DIR = "templates"
 
 # -------------------
 # App config
@@ -23,6 +35,7 @@ REPORTS_DIR = "reports"
 # -------------------
 # Skin Lesion Model
 # -------------------
+# benign keratosis-like lesions, basal cell carcinoma, actinic keratoses, vascular lesions, melanocytic nevi, melanoma, and dermatofibroma
 HF_IMAGE_MODEL_ID = "Anwarkh1/Skin_Cancer-Image_Classification"
 print(f"Loading skin model {HF_IMAGE_MODEL_ID} on {DEVICE}...")
 skin_processor = AutoImageProcessor.from_pretrained(HF_IMAGE_MODEL_ID)
@@ -63,17 +76,24 @@ eye_transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
+
 # -------------------
-# LLM Model (Phi-3 Mini)
+# LLM Model (Qwen3-0.6B-Medical-Expert)
 # -------------------
-# HF_LLM_MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
-# print(f"Loading Phi-3 Mini {HF_LLM_MODEL_ID} on {DEVICE}...")
-# tokenizer = AutoTokenizer.from_pretrained(HF_LLM_MODEL_ID, trust_remote_code=True)
-# llm_model = AutoModelForCausalLM.from_pretrained(HF_LLM_MODEL_ID, trust_remote_code=True).to(DEVICE).eval()
+LLM_MODEL_ID = "suayptalha/Qwen3-0.6B-Medical-Expert"
+print(f"Loading medical LLM model '{LLM_MODEL_ID}' on {DEVICE}...")
+
+# Load the new model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID)
+llm_model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_ID).eval()
+
 
 # -------------------
 # Utilities
 # -------------------
+
+report_status = {}
+
 def pil_to_base64(img: Image.Image) -> str:
     buff = io.BytesIO()
     img.save(buff, format="PNG")
@@ -88,70 +108,140 @@ def annotate_image(pil_img: Image.Image, label: str, conf: float):
     draw.text((6, 4), text, fill=(0, 0, 0))
     return annotated
 
-def generate_report(job_id: str, label: str, conf: float, description: str, location: str, analysis_type: str):
-    context_text = "skin lesion" if analysis_type == "skin" else "eye condition"
-    messages = [
-        {
-            "role": "user",
-            "content": f"""
-            You are a clinical AI assistant.
-            Analyze this {context_text} result and return STRICT JSON ONLY (no extra text, no markdown).
 
-            Job ID: {job_id}
-            Findings: label={label}, confidence={conf*100:.1f}%
-            User description: {description}
-            Location: {location}
+# Function to create the DiagnosiX Report PDF
+def create_pdf(prediction, analysis_type, conf, description, location, report_data, pdf_filename="diagnosis_report.pdf"):
+    # Initialize FPDF instance
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
 
-            JSON format:
-            {{
-            "summary": "Short paragraph describing the findings",
-            "recommendation": "One-line medical recommendation",
-            "checklist": ["Tip 1", "Tip 2", "Tip 3"]
-            }}
-            """
-        }
-    ]
+    # Set the header background
+    pdf.set_fill_color(0, 86, 179)  # Blue color (RGB)
+    pdf.rect(0, 0, 210, 20, 'F')  # Full width, 20mm height rectangle as background
+    pdf.set_font("Arial", 'B', 16)
+    pdf.set_text_color(255, 255, 255)  # White text color
+    pdf.cell(200, 10, txt="DiagnosiX Report", ln=True, align="C")
+    pdf.ln(10)  # Line break
 
+    # Set content section background
+    pdf.set_fill_color(255, 255, 255)  # White background for content
+    pdf.rect(10, 30, 190, 260, 'F')  # Box for content area
+
+    # Content section header
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 86, 179)  # Blue color for titles
+    pdf.cell(200, 10, txt=analysis_type, ln=True, align="L")
+    pdf.ln(5)
+
+    # Job details
+    pdf.set_font("Arial", size=12)
+    pdf.set_text_color(0, 0, 0)  # Black text for content
+    pdf.cell(200, 10, txt=f"Prediction: {prediction}", ln=True)
+    pdf.cell(200, 10, txt=f"Confidence: {conf * 100:.1f}%", ln=True)
+    pdf.ln(5)
+
+    # Description
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Description", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, txt=description.capitalize())
+    pdf.ln(5)
+
+    # Location
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Location", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=location.capitalize(), ln=True)
+    pdf.ln(5)
+
+    # Report summary
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Diagnosis and Recommendations")
+    pdf.ln(1)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, txt=report_data)  # This will handle the content properly
+
+    # Position the footer 30mm from the bottom of the page
+    pdf.set_y(-30)  # 30mm from the bottom of the page
+    pdf.set_font("Arial", 'I', 10)
+    pdf.set_text_color(136, 136, 136)  # Gray text for disclaimer
+    pdf.multi_cell(0, 10, txt="This AI analysis is not a substitute for professional medical advice. Consult a healthcare provider for a diagnosis.", align='C')
+
+    # Save PDF
+    pdf.output(f"./pdf_reports/{pdf_filename}")
+    print(f"PDF saved as {pdf_filename}")
+
+# Function to generate a report, summary, and recommendation
+def generate_report(job_id: str, prediction: str, conf: float, description: str, location: str, analysis_type: str):
+    # Shorter and simpler prompt
+    prompt_text = (
+        f"The user has been diagnosed with {prediction} with {conf*100:.1f}% confidence. "
+        f"Location of the condition: {location if location else 'N/A'}. "
+        f"Description provided by the user: {description if description else 'No description'}. "
+        f"Based on this, what are the **recommended next steps** for the user? "
+        f"Provide guidance on **monitoring**, **treatment**, and any **urgent signs** that may require medical attention."
+        f"Only provide 100-200 words."
+    )
+
+
+    print("Prompt:", prompt_text)
+
+    # Prepare messages for the model
+    messages = [{"role": "user", "content": prompt_text}]
+
+    # Tokenize the input
     inputs = tokenizer.apply_chat_template(
         messages,
-        add_generation_prompt=True,
+        add_generation_prompt=False,
         tokenize=True,
         return_dict=True,
         return_tensors="pt"
     ).to(llm_model.device)
 
+    # Generate response
     with torch.no_grad():
-        outputs = llm_model.generate(**inputs, max_new_tokens=300)
+        outputs = llm_model.generate(**inputs)
 
-    generated_text = tokenizer.decode(
-        outputs[0][inputs["input_ids"].shape[-1]:],
-        skip_special_tokens=True
-    ).strip()
+    # Decode the generated text
+    generated_text = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True)
 
-    try:
-        report_data = json.loads(generated_text)
-    except json.JSONDecodeError:
-        report_data = {
-            "summary": generated_text,
-            "recommendation": "",
-            "checklist": []
-        }
+    # Print the raw generated text for debugging
+    print("Generated Text:", generated_text)
 
-    report_path = os.path.join(REPORTS_DIR, f"{job_id}.json")
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(report_data, f, ensure_ascii=False, indent=2)
+    # Clean the response
+    report_data = re.sub(r"<think>.*?</think>", "", generated_text, flags=re.DOTALL)
+    report_data = re.sub(r"\bassistant\b", "", report_data)  # Remove the word "assistant"
+    print("Cleaned Report Data:", report_data)
 
-    return report_data, f"/reports/{job_id}.json"
+    # Generate the PDF report with the cleaned report_data
+    create_pdf(
+        prediction,
+        analysis_type,
+        conf,
+        description,
+        location,
+        report_data,
+        pdf_filename=f"diagnosis_report_{job_id}.pdf"
+    )
+    
+    # Return the link to download the PDF
+    report_status[job_id]["status"] = "completed"
+    report_status[job_id]["report_url"] = f"/pdf/{job_id}"
+
+    print(f"Report generated {job_id}");
+
 
 # -------------------
 # Endpoints
 # -------------------
-@app.post("/analyze")
+@app.post("/analyze-skin")
 async def analyze_skin(
     file: UploadFile = File(...),
     job_id: str = Form(...),
     description: str = Form(""),
-    location: str = Form("")
+    location: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     try:
         contents = await file.read()
@@ -166,25 +256,27 @@ async def analyze_skin(
             logits = outputs.logits.cpu().squeeze(0)
         top_idx = int(torch.argmax(logits).item())
         top_conf = float(torch.softmax(logits, dim=0)[top_idx].item())
-        label_name = id2label[top_idx] if id2label else f"class_{top_idx}"
+        prediction = id2label[top_idx] if id2label else f"class_{top_idx}"
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image analysis failed: {e}")
 
-    annotated = annotate_image(pil, label_name, top_conf)
+    annotated = annotate_image(pil, prediction, top_conf)
     annotated_b64 = pil_to_base64(annotated)
-    # report_data, report_url = generate_report(job_id, label_name, top_conf, description, location, "skin")
+
+    report_status[job_id] = {"status": "processing", "report_url": None}
+
+    # Trigger report generation in the background
+    background_tasks.add_task(generate_report, job_id, prediction, top_conf, description, location, "Skin Examination")
 
     return JSONResponse(content={
         "job_id": job_id,
         "model_id": HF_IMAGE_MODEL_ID,
-        "label": label_name,
+        "label": prediction,
         "confidence": top_conf,
         "annotated_image": annotated_b64,
-        # "report": report_data,
-        # "report_url": report_url
     })
 
-@app.post("/analyze_wound")
+@app.post("/analyze-wound")
 async def analyze_wound(
     file: UploadFile = File(...),
     job_id: str = Form(...),
@@ -222,7 +314,7 @@ async def analyze_wound(
         # "report_url": report_url
     })
 
-@app.post("/analyze_eye")
+@app.post("/analyze-eye")
 async def analyze_eye(
     file: UploadFile = File(...),
     job_id: str = Form(...),
@@ -257,3 +349,46 @@ async def analyze_eye(
         # "report": report_data,
         # "report_url": report_url
     })
+
+@app.get("/check-report-status/{job_id}")
+async def check_report_status(job_id: str):
+    # Return the current status of the report
+    if job_id not in report_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return report_status[job_id]
+
+
+@app.get("/pdf/{job_id}")
+async def download_report(job_id: str):
+    # # Ensure the report is ready
+    if job_id not in report_status or report_status[job_id]["status"] != "completed":
+        raise HTTPException(status_code=404, detail="Report not ready or not found")
+
+    pdf_path = f"./pdf_reports/diagnosis_report_{job_id}.pdf"
+    
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Report file not found")
+    
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"diagnosis_report_{job_id}.pdf")
+
+
+@app.post("/chat")
+def chat(prompt: str):
+    # The prompt comes directly as the user's input, so we create the message list accordingly
+    messages = [{"role": "user", "content": prompt}]
+    
+    # Extract only the 'content' field from the messages to feed into the tokenizer
+    inputs = tokenizer([msg["content"] for msg in messages], return_tensors="pt", padding=True, truncation=True).to(llm_model.device)
+    
+    outputs = llm_model.generate(
+        **inputs,
+        max_new_tokens=40,
+        do_sample=True,  # Optional, makes output more diverse
+        eos_token_id=tokenizer.eos_token_id
+    )
+
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    return {"response": response}
+

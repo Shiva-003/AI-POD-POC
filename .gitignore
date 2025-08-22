@@ -8,6 +8,7 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 *$py.class
+pdf_reports/
 
 # Python virtual environments
 env/
