@@ -1,38 +1,26 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import "./App.css";
+import { Outlet } from 'react-router-dom';
+import './App.css';
+import Navbar from './components/Navbar/Navbar';
+import Footer from './components/Footer/Footer';
+import { ToastContainer } from 'react-toastify';
 
-function App() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isHome = location.pathname === "/";
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-10 px-6 flex justify-center">
-      <div
-        className={`w-full max-w-5xl bg-white rounded-xl shadow-lg 
-          ${isHome ? "px-6 py-6" : "p-10"} 
-          flex flex-col`}
-        style={{
-          maxHeight: isHome ? "650px" : "none",
-        }}
-      >
-        {/* Header */}
-        <div
-          onClick={() => !isHome && navigate("/")}
-          className="flex items-center gap-4 mb-8 border-b pb-4 cursor-pointer select-none"
-        >
-          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-            ✓
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800">DiagnosiX</h1>
-        </div>
+const App = () => {
+	return (
+		<div className="min-h-screen flex flex-col bg-background-light">
+			<ToastContainer />
+			<header className="sticky top-0 z-50  backdrop-blur-sm bg-background-light/40 border-1 border-gray-200/40">
+				<Navbar />
+			</header>
+			<main className="container mx-auto px-4 sm:px-6 lg:px-8 h-[calc(100vh-150px)]">
+				<Outlet />
+			</main>
 
-        <div className="flex-1">
-          <Outlet />
-        </div>
-      </div>
-    </div>
-  );
+			<footer className="container mx-auto px-4 sm:px-6 lg:px-8">
+				<Footer />
+			</footer>
+		</div>
+	);
 }
 
 export default App;
