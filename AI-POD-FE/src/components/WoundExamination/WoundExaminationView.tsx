@@ -93,7 +93,7 @@ export default function WoundExaminationView({
                 )}
                 <div>
                   <div className="text-green-600 font-bold text-xl">
-                    {result.label}
+                    {result.prediction}
                   </div>
                   <div className="text-sm text-gray-600">
                     Confidence: {Math.round(result.confidence * 100)}%
@@ -113,7 +113,7 @@ export default function WoundExaminationView({
                 <button
                   className="px-4 py-2 border rounded-md hover:bg-gray-100 transition"
                   onClick={() =>
-                    window.open(`/report?job=${result.job_id}`, "_blank")
+                    window.open(`/report?job=${result.id}`, "_blank")
                   }
                 >
                   Download Report

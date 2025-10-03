@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from 'axios';
 import SkinExaminationView from "./SkinExaminationView";
+import { toast } from "react-toastify";
 
 export default function SkinExamination(){
 
@@ -29,7 +30,7 @@ export default function SkinExamination(){
       form.append('description', desc);
       form.append('location', location);
 
-      const resp = await axios.post('http://localhost:3000/analyze-skin', form, {
+      const resp = await axios.post('http://localhost:3000/api/user/skinAnalyze', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -45,9 +46,9 @@ export default function SkinExamination(){
     }
   };
 
-  const handleCheckStatus = async (jobId: string) => {
+  const handleCheckStatus = async (id: string) => {
     try {
-      const resp = await axios.get(`http://localhost:3000/check-report-status/${jobId}`);
+      const resp = await axios.get(`http://localhost:3000/api/user/checkReportStatus/${id}`);
       setResult({
         ...result,
         report_status: resp.data.status,
@@ -59,9 +60,9 @@ export default function SkinExamination(){
     }
   };
 
-  const handleDownloadReport = async (jobId: string) => {
+  const handleDownloadReport = async (id: string) => {
     try {
-      const response = await axios.get(`http://localhost:3000/download-report/${jobId}`, { responseType: 'blob' });
+      const response = await axios.get(`http://localhost:3000/api/user/downloadReport/${id}`, { responseType: 'blob' });
 
       // Create a blob from the PDF file
       const file = new Blob([response.data], { type: 'application/pdf' });
@@ -70,7 +71,7 @@ export default function SkinExamination(){
       const link = document.createElement('a');
       const url = window.URL.createObjectURL(file);
       link.href = url;
-      link.setAttribute('download', `diagnosis_report_${jobId}.pdf`);
+      link.setAttribute('download', `diagnosis_report_${id}.pdf`);
 
       // Append to the DOM and trigger the download
       document.body.appendChild(link);
@@ -81,7 +82,7 @@ export default function SkinExamination(){
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading the report:', error);
-      alert('There was an issue downloading the report. Please try again.');
+      toast.error('There was an issue downloading the report. Please try again.');
     }
   };
 

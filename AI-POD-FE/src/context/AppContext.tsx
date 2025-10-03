@@ -10,8 +10,9 @@ interface IUserData{
 interface AppContextType {
 	backendUrl: string;
 	isLoggedIn: boolean;
-	setIsLoggedIn: (value: boolean) => void;
+	isAuthResolved: boolean;
 	userData: IUserData | undefined;
+	setIsLoggedIn: (value: boolean) => void;
 	setUserData: (value: any) => void;
 	getUserData: () => void;
 }
@@ -19,8 +20,9 @@ interface AppContextType {
 export const AppContext = createContext<AppContextType>({
 	backendUrl: '',
 	isLoggedIn: false,
-	setIsLoggedIn: () => {},
+	isAuthResolved: false,
 	userData: undefined,
+	setIsLoggedIn: () => {},
 	setUserData: () => {},
 	getUserData: () => {}
 });
@@ -32,16 +34,19 @@ export const AppContextProvider = ({ children }: any) => {
 	const backendUrl = import.meta.env.VITE_BACKEND_URL;
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [userData, setUserData] = useState(undefined);
+	const [isAuthResolved, setIsAuthResolved] = useState(false);
 
 	const getAuthState = async () => {
 		try{
 			const {data} = await axios.get(backendUrl + '/api/auth/is-authenticated');
 			if(data.status === 200){
 				setIsLoggedIn(true)
-				getUserData();
+				await getUserData();
 			}
 		}catch(error: any){
 			console.log(error.message);
+		}finally{
+			setIsAuthResolved(true);
 		}
 	}
 
@@ -57,8 +62,9 @@ export const AppContextProvider = ({ children }: any) => {
 	const value = {
 		backendUrl,
 		isLoggedIn,
-		setIsLoggedIn,
 		userData,
+		isAuthResolved,
+		setIsLoggedIn,
 		setUserData,
 		getUserData
 	};

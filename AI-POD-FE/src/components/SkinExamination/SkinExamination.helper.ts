@@ -4,10 +4,10 @@ export type SkinExaminationViewProps = {
   location: string;
   loading: boolean;
   result: {
-    label: string;
+    prediction: string;
     confidence: number;
     annotated_image: string;
-    job_id: string;
+    id: string;
     report_status: string;
   } | null;
   error: string | null;

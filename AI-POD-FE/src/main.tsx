@@ -12,6 +12,7 @@ import { AppContextProvider } from './context/AppContext.tsx';
 import EmailVerifyPage from './pages/EmailVerifyPage/EmailVerifyPage.tsx';
 import RouteGaurd from './gaurds/RouteGaurd.tsx';
 import PublicRouteGaurd from './gaurds/PublicRouteGaurd.tsx';
+import UserHistoryPage from './pages/UserHistoryPage/UserHistoryPage.tsx';
 
 const router = createBrowserRouter([
 	{
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
 					{ path: 'skin-examination', element: <SkinExamination /> },
 					{ path: 'eye-examination', element: <EyeExamination /> },
 					{ path: 'wound-examination', element: <WoundExamination /> },
+					{ path: 'user-history', element: <UserHistoryPage /> }
 				],
 			},
 		],

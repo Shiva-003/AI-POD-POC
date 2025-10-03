@@ -173,7 +173,7 @@ def create_pdf(prediction, analysis_type, conf, description, location, report_da
     print(f"PDF saved as {pdf_filename}")
 
 # Function to generate a report, summary, and recommendation
-def generate_report(job_id: str, prediction: str, conf: float, description: str, location: str, analysis_type: str):
+def generate_report(id: str, prediction: str, conf: float, description: str, location: str, analysis_type: str):
     # Shorter and simpler prompt
     prompt_text = (
         f"The user has been diagnosed with {prediction} with {conf*100:.1f}% confidence. "
@@ -222,14 +222,14 @@ def generate_report(job_id: str, prediction: str, conf: float, description: str,
         description,
         location,
         report_data,
-        pdf_filename=f"diagnosis_report_{job_id}.pdf"
+        pdf_filename=f"diagnosis_report_{id}.pdf"
     )
     
     # Return the link to download the PDF
-    report_status[job_id]["status"] = "completed"
-    report_status[job_id]["report_url"] = f"/pdf/{job_id}"
+    report_status[id]["status"] = "completed"
+    report_status[id]["report_url"] = f"/pdf/{id}"
 
-    print(f"Report generated {job_id}");
+    print(f"Report generated {id}");
 
 
 # -------------------
@@ -238,7 +238,7 @@ def generate_report(job_id: str, prediction: str, conf: float, description: str,
 @app.post("/analyze-skin")
 async def analyze_skin(
     file: UploadFile = File(...),
-    job_id: str = Form(...),
+    id: str = Form(...),
     description: str = Form(""),
     location: str = Form(""),
     background_tasks: BackgroundTasks = BackgroundTasks()
@@ -263,15 +263,15 @@ async def analyze_skin(
     annotated = annotate_image(pil, prediction, top_conf)
     annotated_b64 = pil_to_base64(annotated)
 
-    report_status[job_id] = {"status": "processing", "report_url": None}
+    report_status[id] = {"status": "processing", "report_url": None}
 
     # Trigger report generation in the background
-    background_tasks.add_task(generate_report, job_id, prediction, top_conf, description, location, "Skin Examination")
+    background_tasks.add_task(generate_report, id, prediction, top_conf, description, location, "Skin Examination")
 
     return JSONResponse(content={
-        "job_id": job_id,
+        "id": id,
         "model_id": HF_IMAGE_MODEL_ID,
-        "label": prediction,
+        "prediction": prediction,
         "confidence": top_conf,
         "annotated_image": annotated_b64,
     })
@@ -279,7 +279,7 @@ async def analyze_skin(
 @app.post("/analyze-wound")
 async def analyze_wound(
     file: UploadFile = File(...),
-    job_id: str = Form(...),
+    id: str = Form(...),
     description: str = Form(""),
     location: str = Form("")
 ):
@@ -302,12 +302,12 @@ async def analyze_wound(
 
     annotated = annotate_image(pil, label_name, top_conf)
     annotated_b64 = pil_to_base64(annotated)
-    # report_data, report_url = generate_report(job_id, label_name, top_conf, description, location, "wound")
+    # report_data, report_url = generate_report(id, label_name, top_conf, description, location, "wound")
 
     return JSONResponse(content={
-        "job_id": job_id,
+        "id": id,
         "model_id": HF_WOUND_MODEL_ID,
-        "label": label_name,
+        "prediction": label_name,
         "confidence": top_conf,
         "annotated_image": annotated_b64,
         # "report": report_data,
@@ -317,7 +317,7 @@ async def analyze_wound(
 @app.post("/analyze-eye")
 async def analyze_eye(
     file: UploadFile = File(...),
-    job_id: str = Form(...),
+    id: str = Form(...),
     description: str = Form(""),
 ):
     try:
@@ -339,38 +339,38 @@ async def analyze_eye(
 
     annotated = annotate_image(pil, pred_label, pred_conf)
     annotated_b64 = pil_to_base64(annotated)
-    # report_data, report_url = generate_report(job_id, pred_label, pred_conf, description, location, "eye")
+    # report_data, report_url = generate_report(id, pred_label, pred_conf, description, location, "eye")
 
     return JSONResponse(content={
-        "job_id": job_id,
-        "label": pred_label,
+        "id": id,
+        "prediction": pred_label,
         "confidence": pred_conf,
         "annotated_image": annotated_b64,
         # "report": report_data,
         # "report_url": report_url
     })
 
-@app.get("/check-report-status/{job_id}")
-async def check_report_status(job_id: str):
+@app.get("/check-report-status/{id}")
+async def check_report_status(id: str):
     # Return the current status of the report
-    if job_id not in report_status:
+    if id not in report_status:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    return report_status[job_id]
+    return report_status[id]
 
 
-@app.get("/pdf/{job_id}")
-async def download_report(job_id: str):
+@app.get("/pdf/{id}")
+async def download_report(id: str):
     # # Ensure the report is ready
-    if job_id not in report_status or report_status[job_id]["status"] != "completed":
+    if id not in report_status or report_status[id]["status"] != "completed":
         raise HTTPException(status_code=404, detail="Report not ready or not found")
 
-    pdf_path = f"./pdf_reports/diagnosis_report_{job_id}.pdf"
+    pdf_path = f"./pdf_reports/diagnosis_report_{id}.pdf"
     
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="Report file not found")
     
-    return FileResponse(pdf_path, media_type="application/pdf", filename=f"diagnosis_report_{job_id}.pdf")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"diagnosis_report_{id}.pdf")
 
 
 @app.post("/chat")

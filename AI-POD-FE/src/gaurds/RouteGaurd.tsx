@@ -3,9 +3,14 @@ import { AppContext } from "../context/AppContext";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 const RouteGaurd = () => {
-  const { isLoggedIn, userData } = useContext(AppContext);
+  const { isAuthResolved, isLoggedIn, userData } = useContext(AppContext);
   const isVerified = userData?.isVerified;
   const location = useLocation();
+
+  // Wait silently until the auth check (via HTTP-only cookie) is resolved
+  if (!isAuthResolved) {
+    return null; // Don't show anything, don't redirect yet
+  }
 
   // 1. Not logged in → go to landing
   if (!isLoggedIn) {

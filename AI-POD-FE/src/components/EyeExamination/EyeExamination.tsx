@@ -25,7 +25,7 @@ export default function EyeExamination() {
       form.append("image", file);
       form.append("description", desc);
 
-      const resp = await axios.post("http://localhost:3000/analyze-eye", form, {
+      const resp = await axios.post("http://localhost:3000/api/user/eyeAnalyze", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(resp.data);

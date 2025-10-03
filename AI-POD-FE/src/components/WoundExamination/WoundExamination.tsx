@@ -26,10 +26,10 @@ export default function WoundExamination() {
       form.append("description", desc);
 
       // Wound endpoint instead of eye
-      const resp = await axios.post("http://localhost:3000/analyze-wound", form, {
+      const {data} = await axios.post("http://localhost:3000/api/user/woundMonitor", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setResult(resp.data);
+      setResult(data.data);
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data || err.message);

@@ -35,7 +35,7 @@ export default function SkinExaminationView({
       setShowProcessing(false);
       setShowDownloadButton(false);
     }
-  }, [result?.report_status, result?.job_id, onCheckStatus]);
+  }, [result?.report_status, result?.id, onCheckStatus]);
   
   const [fileName, setFileName] = useState<string>("");
 
@@ -138,7 +138,7 @@ export default function SkinExaminationView({
                   />
                 )}
                 <div>
-                  <div className="text-green-600 font-bold text-base">{result.label}</div>
+                  <div className="text-green-600 font-bold text-base">{result.prediction}</div>
                   <div className="text-xs text-gray-600">
                     Confidence: {Math.round(result?.confidence * 100)}%
                   </div>
@@ -151,7 +151,7 @@ export default function SkinExaminationView({
                   result.report_status === 'processing' &&
                 <button
                   className="px-3 py-1 border rounded-md hover:bg-gray-100 transition"
-                  onClick={() => onCheckStatus(result.job_id)}
+                  onClick={() => onCheckStatus(result.id)}
                 >
                   Check Report Status
                 </button>
@@ -162,7 +162,7 @@ export default function SkinExaminationView({
                 {showDownloadButton && (
                   <button
                     className="px-3 py-1 border rounded-md hover:bg-gray-100 transition mt-4"
-                    onClick={() => onReportDownload(result.job_id)}
+                    onClick={() => onReportDownload(result.id)}
                   >
                     Download Report
                   </button>

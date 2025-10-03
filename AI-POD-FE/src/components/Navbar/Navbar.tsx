@@ -37,6 +37,28 @@ const Navbar = () => {
 				</NavLink>
 
 				{isLoggedIn && (
+					<div className="hidden md:flex md:items-center md:space-x-8">
+						<NavLink
+							to="/dashboard"
+							className={({ isActive }) =>
+								`hover:text-primary transition-colors ${isActive ? 'text-primary font-semibold' : 'text-muted-light'}`
+							}
+							>
+							Home
+							</NavLink>
+
+							<NavLink
+							to="/user-history"
+							className={({ isActive }) =>
+								`hover:text-primary transition-colors ${isActive ? 'text-primary font-semibold' : 'text-muted-light'}`
+							}
+							>
+							History
+							</NavLink>
+					</div>
+				)}
+
+				{isLoggedIn && (
 					<div className="w-8 h-8 cursor-pointer bg-gray-200 font-bold rounded-full flex justify-center items-center relative group">
 						{userData?.name[0].toUpperCase()}
 

@@ -25,11 +25,11 @@
 3. Run the FastAPI app
 
     ```
-    fastapi run main.py
+    uvicorn main:app
     ```
 
     Addtionally, Add the --reload flag to enable hot reload during development:
 
     ```
-    fastapi run main.py --reload
+    uvicorn main:app --reload
     ```
