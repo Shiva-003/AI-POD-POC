@@ -14,7 +14,7 @@ const port = process.env.port || 3000;
 
 
 // Uncomment this to generate a key for jwt
-// console.log("Key", randomBytes(64).toString('hex'));
+console.log("Key", randomBytes(64).toString('hex'));
 
 const app = express();
 app.use(express.json());

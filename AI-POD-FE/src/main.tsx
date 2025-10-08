@@ -13,6 +13,7 @@ import EmailVerifyPage from './pages/EmailVerifyPage/EmailVerifyPage.tsx';
 import RouteGaurd from './gaurds/RouteGaurd.tsx';
 import PublicRouteGaurd from './gaurds/PublicRouteGaurd.tsx';
 import UserHistoryPage from './pages/UserHistoryPage/UserHistoryPage.tsx';
+import ForgotPassword from './pages/ForgotPassword/ForgotPage.tsx';
 
 const router = createBrowserRouter([
 	{
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
 				children: [
 					{ index: true, element: <LandingPage /> },
 					{ path: 'sign-up', element: <SignUpPage /> },
+					{ path: 'forgot-password', element: <ForgotPassword /> },
 				],
 			},
 			{
