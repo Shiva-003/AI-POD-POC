@@ -6,42 +6,59 @@ const Home = () => {
 
   const options = [
     {
-      label: "Skin",
+      label: "Skin Examination",
       path: "/skin-examination",
-      icon: <FaHandHoldingMedical size={50} />,
+      icon: <FaHandHoldingMedical size={28} />,
+      description: "Check for skin-related conditions using advanced AI models.",
     },
     {
-      label: "Eye",
+      label: "Eye Examination",
       path: "/eye-examination",
-      icon: <FaEye size={50} />,
+      icon: <FaEye size={28} />,
+      description: "Analyze eye images for potential issues like infections or cataracts.",
     },
     {
-      label: "Wound",
+      label: "Wound Examination",
       path: "/wound-examination",
-      icon: <FaBandAid size={50} />,
+      icon: <FaBandAid size={28} />,
+      description: "Assess wound severity and receive treatment suggestions.",
     },
   ];
 
   return (
-    <div className="min-h-[calc(100vh-81px)] flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-white px-6 py-10">
-      {/* Heading */}
-      <h2 className="text-4xl font-extrabold mb-14 text-gray-800 text-center">
-        What would you like to examine?
-      </h2>
+    <div className="min-h-[calc(100vh-81px)] bg-gradient-to-b from-blue-50 to-white py-12 px-6">
+      {/* Header */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-800 mb-3">
+          Choose Your Examination
+        </h1>
+        <p className="text-gray-600 max-w-xl mx-auto text-lg">
+          Select an examination type below to begin your diagnostic journey.
+        </p>
+      </div>
 
-      {/* Options Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 w-full max-w-6xl place-items-center">
-        {options.map(({ label, path, icon }) => (
+      {/* Vertical List of Exams */}
+      <div className="space-y-10 max-w-2xl mx-auto">
+        {options.map(({ label, path, icon, description }) => (
           <div
             key={label}
-            onClick={() => navigate(path)}
-            className="cursor-pointer bg-white border border-gray-200 rounded-2xl p-8 w-64 h-64 flex flex-col items-center justify-center shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group"
+            className="bg-white rounded-xl shadow-md p-6 flex items-start hover:shadow-xl transition-shadow duration-300"
           >
-            <div className="text-blue-600 mb-5 group-hover:scale-110 transition-transform duration-300">
-              {icon}
-            </div>
-            <div className="text-2xl text-gray-800 font-semibold group-hover:text-blue-700 transition-colors">
-              {label}
+            {/* Icon */}
+            <div className="text-blue-600 mr-5 mt-1">{icon}</div>
+
+            {/* Text Content */}
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-800 mb-1">
+                {label}
+              </h2>
+              <p className="text-gray-500 text-sm mb-4">{description}</p>
+              <button
+                onClick={() => navigate(path)}
+                className="bg-blue-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-700 transition"
+              >
+                Analyze Now
+              </button>
             </div>
           </div>
         ))}
